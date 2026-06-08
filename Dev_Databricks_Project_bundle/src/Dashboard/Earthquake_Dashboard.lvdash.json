@@ -1,0 +1,380 @@
+{
+  "datasets": [
+    {
+      "name": "9c799591",
+      "displayName": "Earthquake Data",
+      "queryLines": [
+        "WITH raw_data AS (\r\n",
+        "  SELECT\r\n",
+        "    explode(features) AS feature\r\n",
+        "  FROM\r\n",
+        "    read_files('/Volumes/earthquake/bronze/earthquake_data', format => 'json')\r\n",
+        ")\r\n",
+        "SELECT\r\n",
+        "  feature.properties.mag AS mag,\r\n",
+        "  feature.properties.place AS place,\r\n",
+        "  from_unixtime(feature.properties.time / 1000) AS time,\r\n",
+        "  feature.properties.status AS status,\r\n",
+        "  CAST(feature.properties.tsunami AS DOUBLE) AS tsunami,\r\n",
+        "  feature.properties.type AS type,\r\n",
+        "  feature.properties.url AS url,\r\n",
+        "  feature.properties.detail AS detail,\r\n",
+        "  CAST(feature.properties.felt AS DOUBLE) AS felt,\r\n",
+        "  feature.properties.cdi AS cdi,\r\n",
+        "  feature.properties.mmi AS mmi,\r\n",
+        "  feature.properties.alert AS alert,\r\n",
+        "  CAST(feature.properties.sig AS DOUBLE) AS sig,\r\n",
+        "  feature.properties.net AS net,\r\n",
+        "  feature.properties.code AS code,\r\n",
+        "  feature.properties.ids AS ids,\r\n",
+        "  feature.properties.sources AS sources,\r\n",
+        "  feature.properties.types AS types,\r\n",
+        "  CAST(feature.properties.nst AS DOUBLE) AS nst,\r\n",
+        "  feature.properties.dmin AS dmin,\r\n",
+        "  feature.properties.rms AS rms,\r\n",
+        "  feature.properties.gap AS gap,\r\n",
+        "  feature.properties.magType AS magType,\r\n",
+        "  feature.properties.title AS title,\r\n",
+        "  feature.id AS id,\r\n",
+        "  feature.geometry.coordinates[0] AS longitude,\r\n",
+        "  feature.geometry.coordinates[1] AS latitude,\r\n",
+        "  feature.geometry.coordinates[2] AS depth\r\n",
+        "FROM\r\n",
+        "  raw_data"
+      ]
+    },
+    {
+      "name": "ac46df75",
+      "displayName": "Earthquake_Type",
+      "queryLines": [
+        "SELECT \r\n",
+        "    count(*) as total_magnitude_bucket,\r\n",
+        "    magnitude_bucket \r\n",
+        "FROM (\r\n",
+        "    SELECT \r\n",
+        "        CASE\r\n",
+        "            WHEN feature.properties.mag < 2 THEN 'Micro (<2)'\r\n",
+        "            WHEN feature.properties.mag BETWEEN 2 AND 3 THEN 'Minor (2-3)'\r\n",
+        "            WHEN feature.properties.mag BETWEEN 3 AND 4 THEN 'Light (3-4)'\r\n",
+        "            ELSE 'Moderate+ (4+)'\r\n",
+        "        END as magnitude_bucket\r\n",
+        "    FROM (\r\n",
+        "        SELECT explode(features) AS feature\r\n",
+        "        FROM read_files('/Volumes/earthquake/bronze/earthquake_data', format => 'json')\r\n",
+        "    )\r\n",
+        ")\r\n",
+        "GROUP BY magnitude_bucket\r\n",
+        "ORDER BY \r\n",
+        "    CASE magnitude_bucket\r\n",
+        "        WHEN 'Micro (<2)' THEN 1\r\n",
+        "        WHEN 'Minor (2-3)' THEN 2\r\n",
+        "        WHEN 'Light (3-4)' THEN 3\r\n",
+        "        WHEN 'Moderate+ (4+)' THEN 4\r\n",
+        "    END"
+      ],
+      "catalog": "earthquake",
+      "schema": "silver"
+    },
+    {
+      "name": "923af983",
+      "displayName": "Global Earthquake Events Summarized by Country",
+      "queryLines": [
+        "WITH earthquake_data AS (\r\n",
+        "    SELECT \r\n",
+        "        feature.properties.place AS place\r\n",
+        "    FROM (\r\n",
+        "        SELECT explode(features) AS feature\r\n",
+        "        FROM read_files('/Volumes/earthquake/bronze/earthquake_data', format => 'json')\r\n",
+        "    )\r\n",
+        ")\r\n",
+        "SELECT \r\n",
+        "    count(*) as event_count,\r\n",
+        "    CASE \r\n",
+        "        WHEN size(split(place, ', ')) = 1 THEN split(place, ', ')[0]\r\n",
+        "        ELSE split(place, ', ')[size(split(place, ', ')) - 1]\r\n",
+        "    END as country \r\n",
+        "FROM earthquake_data\r\n",
+        "GROUP BY country\r\n",
+        "ORDER BY event_count DESC"
+      ],
+      "catalog": "earthquake",
+      "schema": "silver"
+    }
+  ],
+  "pages": [
+    {
+      "name": "26a308b5",
+      "displayName": "Earthquake",
+      "layout": [
+        {
+          "widget": {
+            "name": "3ea46298",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# <span style=\"text-align:center;display:block\"><span style=\"font-size: 60px;line-height: 1.5;\">Earthquake Dashboard</span></span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "a46299",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9c799591",
+                  "fields": [
+                    {
+                      "name": "mag",
+                      "expression": "`mag`"
+                    },
+                    {
+                      "name": "place",
+                      "expression": "`place`"
+                    },
+                    {
+                      "name": "time",
+                      "expression": "`time`"
+                    },
+                    {
+                      "name": "tsunami",
+                      "expression": "`tsunami`"
+                    },
+                    {
+                      "name": "url",
+                      "expression": "`url`"
+                    },
+                    {
+                      "name": "alert",
+                      "expression": "`alert`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Earthquake Details"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "mag"
+                  },
+                  {
+                    "fieldName": "place"
+                  },
+                  {
+                    "fieldName": "time"
+                  },
+                  {
+                    "fieldName": "tsunami"
+                  },
+                  {
+                    "fieldName": "url"
+                  },
+                  {
+                    "fieldName": "alert"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "map",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9c799591",
+                  "fields": [
+                    {
+                      "name": "latitude",
+                      "expression": "`latitude`"
+                    },
+                    {
+                      "name": "longitude",
+                      "expression": "`longitude`"
+                    },
+                    {
+                      "name": "mag",
+                      "expression": "`mag`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Map View of Earthquake "
+              },
+              "widgetType": "symbol-map",
+              "encodings": {
+                "coordinates": {
+                  "latitude": {
+                    "fieldName": "latitude"
+                  },
+                  "longitude": {
+                    "fieldName": "longitude"
+                  }
+                },
+                "size": {
+                  "fieldName": "mag",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "earth",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ac46df75",
+                  "fields": [
+                    {
+                      "name": "total_magnitude_bucket",
+                      "expression": "`total_magnitude_bucket`"
+                    },
+                    {
+                      "name": "magnitude_bucket",
+                      "expression": "`magnitude_bucket`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Earthquake_Magnitude"
+              },
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "total_magnitude_bucket",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Total_Magnitude"
+                },
+                "color": {
+                  "fieldName": "magnitude_bucket",
+                  "displayName": "Bucket",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "c362",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "923af983",
+                  "fields": [
+                    {
+                      "name": "event_count",
+                      "expression": "`event_count`"
+                    },
+                    {
+                      "name": "country",
+                      "expression": "`country`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Countries where Earthquake Happened"
+              },
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "event_count",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Total_Places_Earthquake"
+                },
+                "color": {
+                  "fieldName": "country",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 14,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
