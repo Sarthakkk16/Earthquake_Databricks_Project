@@ -4,7 +4,7 @@ name: Deploy Databricks Asset Bundle
 on:
   push:
     branches:
-      - main
+      - develop
 
 jobs:
   deploy:
