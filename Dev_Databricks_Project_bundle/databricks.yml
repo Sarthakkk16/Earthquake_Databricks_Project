@@ -33,7 +33,7 @@ targets:
       host: https://dbc-1ede60a6-46ee.cloud.databricks.com
     variables:
       catalog: dev
-      schema: dev
+      schema: silver
       warehouse_id: 9fe19fadd16c2713
   prod:
     mode: production
@@ -44,7 +44,7 @@ targets:
 
     variables:
       catalog: dev
-      schema: prod
+      schema: gold
       warehouse_id: 9fe19fadd16c2713
     permissions:
       - user_name: sarthak5634sharma@gmail.com
